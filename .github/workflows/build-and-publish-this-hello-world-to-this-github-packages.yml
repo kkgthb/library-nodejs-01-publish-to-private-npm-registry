@@ -1,0 +1,145 @@
+name: "Publish Hello World to this GitHub Packages"
+
+on:
+  push:
+    branches:
+      - "main"
+
+permissions: {}
+
+concurrency:
+  group: "publish-hello-world-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: "ubuntu-latest"
+    timeout-minutes: 20
+    permissions:
+      contents: "read"
+
+    steps:
+      - name: "Check out repository"
+        uses: "actions/checkout@v4"
+        with:
+          persist-credentials: false
+
+      - name: "Set up Node 26"
+        uses: "actions/setup-node@v4"
+        with:
+          node-version: "26.x"
+
+      - name: "Set up npm 12"
+        shell: "pwsh"
+        run: |
+          npm install --global npm@12
+          node --version
+          npm --version
+
+      - name: "Find-and-replace namespace placeholder with this repo's owner"
+        shell: pwsh
+        run: >-
+          & './.cicd_helpers/.katiekodesifiers/github_packages_find_and_replace_as_this_repo_owner.ps1'
+
+      - name: "Build tarball from namespace-substituted shadow copy"
+        shell: "pwsh"
+        run: >-
+          & './.ignoreme/repo_shadow_copy/.cicd_helpers/run_npm_pack.ps1'
+          -WhichPackage 'HelloWorld'
+
+      - name: "Create tarball checksum"
+        shell: "pwsh"
+        run: |
+          $tarball_file_path = Get-ChildItem -Path './.ignoreme/repo_shadow_copy/.ignoreme/dist/HelloWorld' -Filter '*.tgz' -File | Select-Object -ExpandProperty FullName
+          $hash = (Get-FileHash -Path $tarball_file_path -Algorithm SHA256).Hash
+          $hash_file_path = "$tarball_file_path.sha256"
+          "$hash  $(Split-Path $tarball_file_path -Leaf)" | Out-File -FilePath $hash_file_path -Encoding ascii
+
+      - name: "Upload namespace-substituted tarball artifact"
+        uses: "actions/upload-artifact@v4"
+        with:
+          name: "hello-world-tgz"
+          path: |
+            .ignoreme/repo_shadow_copy/.ignoreme/dist/HelloWorld/*.tgz
+            .ignoreme/repo_shadow_copy/.ignoreme/dist/HelloWorld/*.tgz.sha256
+          if-no-files-found: "error"
+
+  publish:
+    runs-on: "ubuntu-latest"
+    needs: "build"
+    environment: "this_owners_github_packages"
+    timeout-minutes: 20
+    permissions:
+      contents: "read"
+      packages: "write"
+
+    steps:
+      - name: "Check out repository"
+        uses: "actions/checkout@v4"
+        with:
+          persist-credentials: false
+
+      - name: "Set up Node 26"
+        uses: "actions/setup-node@v4"
+        with:
+          node-version: "26.x"
+
+      - name: "Set up npm 12"
+        shell: "pwsh"
+        run: |
+          npm install --global npm@12
+          node --version
+          npm --version
+
+      - name: "Find-and-replace namespace placeholder with this repo's owner"
+        shell: "pwsh"
+        run: >-
+          & './.cicd_helpers/.katiekodesifiers/github_packages_find_and_replace_as_this_repo_owner.ps1'
+
+      - name: "Download tarball artifact"
+        uses: "actions/download-artifact@v4"
+        with:
+          name: "hello-world-tgz"
+          path: ".ignoreme/tgz_downloads/HelloWorld"
+
+      - name: "Verify tarball checksum"
+        shell: "pwsh"
+        run: |
+          Push-Location './.ignoreme/tgz_downloads/HelloWorld'
+          Try {
+            $hash_file_path = Get-ChildItem -Path . -Filter '*.tgz.sha256' -File | Select-Object -ExpandProperty FullName
+            $tarball_file_name = (Get-Content -Path $hash_file_path | ForEach-Object { ($_ -split '\s+', 2)[1] }).Trim()
+            $tarball_file_path = Join-Path -Path (Get-Location) -ChildPath $tarball_file_name
+            $expected_hash = (Get-Content -Path $hash_file_path | ForEach-Object { ($_ -split '\s+', 2)[0] }).Trim().ToUpperInvariant()
+            $actual_hash = (Get-FileHash -Path $tarball_file_path -Algorithm SHA256).Hash.ToUpperInvariant()
+            If ($expected_hash -ne $actual_hash) {
+              Throw "Tarball checksum mismatch. Expected $expected_hash but got $actual_hash"
+            }
+          }
+          Finally {
+            Pop-Location
+          }
+
+      # The bearer token setter, npm userconfig setter, and publish script must all run in the same
+      # PowerShell process because SetEnvironmentVariable(..., 'Process') only persists within the
+      # current process -- it does not carry across separate 'run:' steps.
+      # (Ahem -- so says the LLM, anyway.  Can't remember if I, the human, agree.  Anyway, whatevs.)
+      - name: Authenticate, configure npm registry, and publish
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 1. Copy GITHUB_TOKEN into TARGET_NPM_REGISTRY_BEARER_TOKEN
+          & './.cicd_helpers/bearer_token_setters/github_packages.ps1'
+
+          # 2. Write an .npmrc override pointing the scoped namespace at the target registry.
+          & './.ignoreme/repo_shadow_copy/.cicd_helpers/npm_userconfig_setters/github_packages.ps1'
+
+          # 3. Publish the tarball from the tgz_downloads folder.
+          #    This folder is populated by actions/download-artifact in this publish job.
+          & './.cicd_helpers/run_npm_publish.ps1' `
+            -TarballParentFolder './.ignoreme/tgz_downloads/HelloWorld'
+
+          # 4. Clean up secrets from the process environment
+          & './.cicd_helpers/bearer_token_setters/null.ps1'
+          & './.cicd_helpers/npm_userconfig_setters/null.ps1'

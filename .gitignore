@@ -1,0 +1,6 @@
+.ignoreme
+
+# Some common things to ignore
+.vscode
+dist
+node_modules

@@ -1,0 +1,17 @@
+{
+    "name": "@katiekodes/hello-world",
+    "version": "0.0.1",
+    "description": "Ultraminimalist demo package",
+    "author": {
+        "name": "Katie Kodes",
+        "url": "https://katiekodes.com"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/kkgthb/library-nodejs-01-publish-to-private-npm-registry"
+    },
+    "main": "index.js",
+    "files": [
+        "index.js"
+    ]
+}

@@ -2,6 +2,10 @@ Function Set-NpmUserConfigOverrideForGithubPackages {
     Process {
         $repo_root_folder_path = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($PSScriptRoot, '..', '..'))
         $npmrc_override_file_path = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($repo_root_folder_path, '.ignoreme', 'npmrc_override', 'npmrc_override.ini'))
+        # IMPORTANT:  GitHub Packages will reject `npm publish` attempts that use any 
+        #   `@insertyourcompanynamespacehere`-style
+        #   NPM package scope name other than your chosen target GitHub Packages instance's owner 
+        #   (that is, `@` followed by a GitHub username or GitHub organization name).
         $npm_userconfig_override_contents = @'
 @insertyourcompanynamespacehere:registry=https://registry.npmjs.org/
 //registry.npmjs.org/:always-auth=true

@@ -94,7 +94,7 @@ Function New-NpmTarballFile {
             }
         }
         Catch {
-            Write-Error "An exception occurred during 'npm pack --dry-run': $_"
+            Write-Error "An exception occurred during 'npm pack': $_"
         }
         Finally {
             $ErrorActionPreference = $old_error_action_preference

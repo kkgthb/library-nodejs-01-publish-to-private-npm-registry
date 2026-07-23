@@ -24,10 +24,22 @@ Function Publish-NpmTarballFileToTargetRegistry {
         Try {
             $old_error_action_preference = $ErrorActionPreference
             $ErrorActionPreference = 'Stop'
-            $already_published_version_number = (npm view "$($package_json_contents.name)@$($package_json_contents.version)" version)
-            If ($LASTEXITCODE -ne 0) {
-                Write-Error "'npm view' failed with exit code: $LASTEXITCODE"
+            $pkg_name_and_version = "$($package_json_contents.name)@$($package_json_contents.version)"
+            $already_published_version_number = ""
+
+            # First-time publish returns 404 from npm view; treat that as not-yet-published.
+            $npm_view_output_lines = @(& npm view $pkg_name_and_version version 2>&1)
+            $npm_view_exit_code = $LASTEXITCODE
+            If ($npm_view_exit_code -eq 0) {
+                $already_published_version_number = ($npm_view_output_lines | Select-Object -Last 1).ToString().Trim("'", '"', ' ')
             }
+            ElseIf (($npm_view_output_lines -join "`n") -match 'E404|404 Not Found|not found') {
+                Write-Host "Package version not found yet in target registry: $pkg_name_and_version"
+            }
+            Else {
+                Throw "'npm view' failed for $pkg_name_and_version with exit code $npm_view_exit_code`n$($npm_view_output_lines -join "`n")"
+            }
+
             If ($already_published_version_number -eq $package_json_contents.version) {
                 Write-Host "No need to publish package $($package_json_contents.name) -- $($package_json_contents.version) already published." -ForegroundColor 'Green'
             }

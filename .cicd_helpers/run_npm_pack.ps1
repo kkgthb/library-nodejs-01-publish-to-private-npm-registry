@@ -32,7 +32,9 @@ Function New-NpmTarballFile {
             Throw "Package.json file not found: $selected_pkg_json_file_path"
         }
         $selected_pkg_dist_folder_path = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($dist_folder_path, $which_package.ToString()))
-        [System.IO.Directory]::Delete($selected_pkg_dist_folder_path, $true) | Out-Null # Remove any existing dist-pkg-specific directory from old runs
+        If (Test-Path -Path $selected_pkg_dist_folder_path -PathType 'Container') {
+            [System.IO.Directory]::Delete($selected_pkg_dist_folder_path, $true) | Out-Null # Remove any existing dist-pkg-specific directory from old runs
+        }
         [System.IO.Directory]::CreateDirectory($selected_pkg_dist_folder_path) | Out-Null # Create the dist-pkg-specific directory afresh
 
         # Do the NPM Pack dry-run

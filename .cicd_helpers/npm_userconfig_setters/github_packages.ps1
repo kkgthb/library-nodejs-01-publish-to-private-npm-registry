@@ -7,7 +7,7 @@ Function Set-NpmUserConfigOverrideForGithubPackages {
         #   NPM package scope name other than your chosen target GitHub Packages instance's owner 
         #   (that is, `@` followed by a GitHub username or GitHub organization name).
         $npm_userconfig_override_contents = @'
-@insertyourcompanynamespacehere:registry=https://registry.npmjs.org/
+@insertyourcompanynamespacehere:registry=https://npm.pkg.github.com/
 //registry.npmjs.org/:always-auth=true
 //registry.npmjs.org/:_authToken=${TARGET_NPM_REGISTRY_BEARER_TOKEN}
 '@

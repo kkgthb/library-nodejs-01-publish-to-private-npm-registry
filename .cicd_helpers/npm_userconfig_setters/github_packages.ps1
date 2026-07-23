@@ -8,8 +8,8 @@ Function Set-NpmUserConfigOverrideForGithubPackages {
         #   (that is, `@` followed by a GitHub username or GitHub organization name).
         $npm_userconfig_override_contents = @'
 @insertyourcompanynamespacehere:registry=https://npm.pkg.github.com/
-//registry.npmjs.org/:always-auth=true
-//registry.npmjs.org/:_authToken=${TARGET_NPM_REGISTRY_BEARER_TOKEN}
+//npm.pkg.github.com/:always-auth=true
+//npm.pkg.github.com/:_authToken=${TARGET_NPM_REGISTRY_BEARER_TOKEN}
 '@
         New-Item -ItemType Directory -Path (Split-Path $npmrc_override_file_path) -Force | Out-Null
         $npm_userconfig_override_contents | Out-File -FilePath $npmrc_override_file_path

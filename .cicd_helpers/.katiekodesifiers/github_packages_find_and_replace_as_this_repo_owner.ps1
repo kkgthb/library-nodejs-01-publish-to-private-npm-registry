@@ -19,7 +19,7 @@ If (Test-Path -Path $shadow_copy_folder_path -PathType 'Container') {
 
 # Copy every file from repo root into the shadow copy, skipping .git and .ignoreme
 $folders_to_exclude = @('.git', '.ignoreme')
-Get-ChildItem -Path $repo_root_folder_path -Recurse -File | Where-Object {
+Get-ChildItem -Path $repo_root_folder_path -Recurse -File -Force | Where-Object {
     $relative = $_.FullName.Substring($repo_root_folder_path.Length).TrimStart('\', '/')
     $top_level_folder = ($relative -split '[/\\]')[0]
     $folders_to_exclude -notcontains $top_level_folder

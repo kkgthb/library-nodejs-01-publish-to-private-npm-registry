@@ -10,8 +10,8 @@
         "type": "git",
         "url": "https://github.com/kkgthb/library-nodejs-01-publish-to-private-npm-registry"
     },
-    "main": "index.js",
+    "main": "sayHello.js",
     "files": [
-        "index.js"
+        "sayHello.js"
     ]
 }
